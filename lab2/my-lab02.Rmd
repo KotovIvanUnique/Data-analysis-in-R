@@ -1,0 +1,166 @@
+---
+title: "lab2"
+author: "Котов Иван, РИ-440004"
+date: '15 октября 2017 г '
+output: html_document
+---
+Исходные данные
+``` {r}
+library(MASS)
+data(Cars93)
+```
+Задание 1
+Выполните команду summary() на полном наборе данных. Можно ли по результату выполнения сказать сколько строк в датафрейме? Если да, напишите сколько. Если нет, то приведите другой способ.
+``` {r}
+summary(Cars93)
+# Количество строк в датафрейме:
+nrow(Cars93)
+```
+Найдите среднюю цену машин с задним приводом.
+``` {r}
+rwdcars = subset(Cars93, DriveTrain == "Rear", select = Price)
+mean(rwdcars[[1]])
+```
+Найдите минимальное число лошадиных сил автомобиля для 7 пассажиров. Для 6 пассажиров.
+``` {r}
+# Для 7 пассажиров:
+cars7pass = subset(Cars93, Passengers == 7, select = Horsepower)
+min(cars7pass[[1]])
+# Для 6 пассажиров:
+cars6pass = subset(Cars93, Passengers == 6, select = Horsepower)
+min(cars6pass[[1]])
+# Второй вариант:
+# cars6pass = Cars93[Cars93[, "Passengers"] == 6, "Horsepower"]
+```
+Найдите машины с максимальным, минимальным и средним(медианой) расстоянием, которая машина может проехать по трассе. Вам понадобятся 2 колонки, чтобы рассчитать расстояние. Какие?
+``` {r}
+#Понадобятся колонки "Трасса" и "Емкость бака":
+mileage = Cars93[c("Make", "MPG.highway", "Fuel.tank.capacity")]
+mileage$Mileage.highway = mileage$MPG.highway * mileage$Fuel.tank.capacity
+# max
+mileage[mileage[, "Mileage.highway"] == max(mileage[, "Mileage.highway"]), ]
+# min
+mileage[mileage[, "Mileage.highway"] == min(mileage[, "Mileage.highway"]), ]
+# median
+mileage[mileage[, "Mileage.highway"] == median(mileage[, "Mileage.highway"]), ]
+```
+Задание 2
+В самом начале занятий приводился пример с фабрикой и производством автомобилей. Ниже приведён пример кода, который старается оптимизировать выпуск продукции ориентируясь на доступные ресурсы.
+``` {r}
+factory.run <- function (o.cars=1, o.trucks=1) {
+  factory <- matrix(c(40,1,60,3),nrow=2, dimnames=list(c("трудодни","сталь"),c("автомобили","грузовики")))
+  warehouse <- c(1600,70) #Доступно материалов на складе
+  names(warehouse) <- rownames(factory)
+  reserve <- c(8,1)
+  names(reserve) <- rownames(factory)
+  output <- c(o.cars, o.trucks)
+  names(output) <- colnames(factory)
+
+  steps <- 0 # Счётчик числа шагов цикла
+  repeat {
+    steps <- steps + 1
+    needed <- factory %*% output # Подсчитаем ресурсы, которые нам нужны для производства требуемого кол-ва машин
+    message(steps)
+    print(needed)
+    # Если ресурсов достаточно и остаток меньше или равен резерву, то мы произвели максимум возможного.
+    # Нужно прекращать
+    if (all(needed <= warehouse) && all((warehouse - needed) <= reserve)) {
+      break()
+    }
+    # Если заявка слишком большая и ресурсов недостаточно, уменьшим её на 10%
+    if (all(needed > warehouse)) {
+      output <- output * 0.9
+      next()
+    }
+    # Если всё наоброт, то увеличим на 10%
+    if (all(needed < warehouse)) {
+      output <- output * 1.1
+      next()
+    }
+    # Если мы потребили одного ресурса слишком много, а другого недостаточно,
+    # то увеличим план на случайную величину
+    output <- output * (1+runif(length(output),min=-0.1,max=0.1))
+  }
+
+  return(output)
+}
+```
+Выполните код и запустите эту функцию factory.run().
+С каким входными значениями функция вызвана? Какой получился результат?
+``` {r}
+factory.run()
+#получаем количество изготовеных автомобилей(10) и грузовиков(19) (o.cars=1, o.trucks=1)
+```
+Повторите вызов 4 раза. Полученные ответы отличаются от полученных ранее? Если да, почему? Если нет, почему?
+``` {r}
+#Вызов №1
+factory.run()
+#Вызов №2
+factory.run()
+#Вызов №3
+factory.run()
+#Вызов №4
+factory.run()
+# Функция вызвана со значениями по умолчанию, то есть o.cars=1, o.trucks=1
+# Результат всегда разный, так как план увеличивается на случайную величину output <- output * (1+runif(length(output),min=-0.1,max=0.1))
+```
+В приведённом коде, переменные steps и output находятся внутри алгоритма. Измените функцию так, чтобы она возвращала число шагов и произведённое количество машин.
+``` {r}
+factory.run <- function (o.cars=1, o.trucks=1) {
+  factory <- matrix(c(40,1,60,3),nrow=2, dimnames=list(c("трудодни","сталь"),c("автомобили","грузовики")))
+  warehouse <- c(1600,70) #Доступно материалов на складе
+  names(warehouse) <- rownames(factory)
+  reserve <- c(8,1)
+  names(reserve) <- rownames(factory)
+  output <- c(o.cars, o.trucks)
+  names(output) <- colnames(factory)
+
+  steps <- 0 # Счётчик числа шагов цикла
+  names(steps)<-"Шагов"
+  repeat {
+    steps <- steps + 1
+    needed <- factory %*% output # Подсчитаем ресурсы, которые нам нужны для производства требуемого кол-ва машин
+    names(needed)<-"needed"
+    message(steps)
+    print(needed)
+    # Если ресурсов достаточно и остаток меньше или равен резерву, то мы произвели максимум возможного.
+    # Нужно прекращать
+    if (all(needed <= warehouse) && all((warehouse - needed) <= reserve)) {
+      break()
+    }
+    # Если заявка слишком большая и ресурсов недостаточно, уменьшим её на 10%
+    if (all(needed > warehouse)) {
+      output <- output * 0.9
+      next()
+    }
+    # Если всё наоброт, то увеличим на 10%
+    if (all(needed < warehouse)) {
+      output <- output * 1.1
+      next()
+    }
+    # Если мы потребили одного ресурса слишком много, а другого недостаточно,
+    # то увеличим план на случайную величину
+    output <- output * (1+runif(length(output),min=-0.1,max=0.1))
+  }
+
+  return(c(steps,output, needed))
+  
+}
+```
+Запуск измененной функции
+``` {r}
+factory.run()
+```
+Установите план равный тридцати автомобилям и 20 грузовикам и выполните функцию.
+Какой получили результат?
+Каким получился итоговый запрос ресурсов (переменная needed)
+Как много итераций пришлось пройти, чтобы получить ответ (переменная steps)?
+Для подсчёта можно пользоваться функциями печати (print, message) или вернуть результат из функции.
+``` {r}
+factory.run(30,20)
+# Результат: 10 автомобилей и 19 грузовиков
+# Итоговый запрос ресурсов: 1598 трудодней и 69 стали
+# Чтобы получить ответ было необходимо совершить 903 итерации
+```
+
+
