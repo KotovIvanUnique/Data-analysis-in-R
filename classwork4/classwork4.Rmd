@@ -1,0 +1,60 @@
+---
+title: "classwork4"
+author: "Котов Иван, РИ-440004"
+date: '30 октября 2017 г '
+output: html_document
+---
+```{r}
+#Загрузите данные в датафрейм.
+gmp <- read.table("https://raw.githubusercontent.com/SergeyMirvoda/MD-DA-2017/master/data/gmp.dat")
+gmp$pop <- gmp$gmp/gmp$pcgmp
+```
+
+```{r}
+estimate.scaling.exponent <- function(a, y0=6611, response=gmp$pcgmp,
+                                        predictor = gmp$pop, maximum.iterations=100, deriv.step = 1/100,
+                                        step.scale = 1e-12, stopping.deriv = 1/100) {
+  mse <- function(a) { mean((response - y0*predictor^a)^2) }
+  for (iteration in 1:maximum.iterations) {
+    deriv <- (mse(a+deriv.step) - mse(a))/deriv.step
+    a <- a - step.scale*deriv
+    if (abs(deriv) <= stopping.deriv) { break() }
+  }
+  fit <- list(a=a,iterations=iteration,
+              converged=(iteration < maximum.iterations))
+  return(fit)
+}
+```
+
+```{r}
+start <- estimate.scaling.exponent(0.15)
+start
+```
+```{r}
+#С помошью полученного коэффициента постройте кривую (функция curve) зависимости
+plot(pcgmp~pop, data=gmp, xlab="Население", log="xy",ylab="Доход на душу населения ($/человеко-год)", main="Метрополии США, 2006")
+curve(6611*x**start[[1]],add=T,col='red')
+```
+```{r}
+#Удалите точку из набора исходных данных случайным образом, как изменилось статистическая оценка коэффициента a?
+
+point<-round(runif(1,max=367))
+gmp<-gmp[-point,]
+a.after.del<-estimate.scaling.exponent(0.15)
+start$a-a.after.del$a 
+#a немного уменьшилось
+```
+
+```{r}
+#Запустите оценку несколько раз с разных стартовых точек. Как изменилось значение a?
+estimate.scaling.exponent(0)
+estimate.scaling.exponent(0.05)
+estimate.scaling.exponent(0.1)
+estimate.scaling.exponent(0.15)
+estimate.scaling.exponent(0.2)
+estimate.scaling.exponent(0.25)
+#а держится около 0.12 и количество итераций держится в одном интервале 
+#Количество итераций меняется при удалении значимых точек :
+#чем ближе стартовое значение а к искомому, тем меньше количество итераций
+```
+
